@@ -1,0 +1,39 @@
+name: Spoegwolf Daily Summary
+on:
+  schedule:
+    # 06:00 UTC == 08:00 Africa/Johannesburg
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}   # allow manual run
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install -r requirements.txt
+      - name: Run summary and email
+        env:
+          TZ: Africa/Johannesburg
+          PLANKTON_AUTH: ${{ secrets.PLANKTON_AUTH }}
+          PLANKTON_COOKIE: ${{ secrets.PLANKTON_COOKIE }}
+          SHOPIFY_BASE: ${{ secrets.SHOPIFY_BASE }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO:   ${{ secrets.EMAIL_TO }}
+          # WhatsApp (if/when you enable it)
+          WA_META_PHONE_NUMBER_ID: ${{ secrets.WA_META_PHONE_NUMBER_ID }}
+          WA_META_TOKEN: ${{ secrets.WA_META_TOKEN }}
+          WA_META_GROUP_ID: ${{ secrets.WA_META_GROUP_ID }}
+        run: |
+          . .venv/bin/activate
+          python -m spoegwolf_daily.main
