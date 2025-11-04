@@ -10,6 +10,12 @@ CFG = {
     # Shopify
     "SHOPIFY_BASE": os.getenv("SHOPIFY_BASE"),
     "SHOPIFY_ACCESS_TOKEN": os.getenv("SHOPIFY_ACCESS_TOKEN"),
+    #GMAIL
+    "EMAIL_HOST": os.getenv("EMAIL_HOST", "smtp.gmail.com"),
+    "EMAIL_PORT": os.getenv("EMAIL_PORT", "465"),
+    "EMAIL_USER": os.getenv("EMAIL_USER"),
+    "EMAIL_PASS": os.getenv("EMAIL_PASS"),
+    "EMAIL_TO":   os.getenv("EMAIL_TO"),  # comma-separated list
 }
 
 # Shows we care about (string GUIDs). Capacity is your own target number.

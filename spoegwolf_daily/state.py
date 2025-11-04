@@ -30,12 +30,9 @@ def _save(state: Dict):
     with open(_STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2, sort_keys=True)
 
+# spoegwolf_daily/state.py
+
 def update_and_get_yesterday_delta(event_guid: str, today_total_included: int, tz_name: str) -> Optional[int]:
-    """
-    Store today's included total for this event and return:
-      (yesterday_total - day_before_yesterday_total)
-    Returns None if there isn't enough history yet.
-    """
     state = _load()
     ev = state.setdefault(event_guid, {"daily": {}})
     daily = ev["daily"]
@@ -44,18 +41,14 @@ def update_and_get_yesterday_delta(event_guid: str, today_total_included: int, t
     yday = today - timedelta(days=1)
     dby  = today - timedelta(days=2)
 
-    t_str   = today.isoformat()
-    y_str   = yday.isoformat()
-    dby_str = dby.isoformat()
+    t_str, y_str, dby_str = today.isoformat(), yday.isoformat(), dby.isoformat()
 
-    # Always record today's snapshot (idempotent)
-    daily[t_str] = int(today_total_included)
+    # Write today's snapshot only if it's not already there
+    if t_str not in daily:
+        daily[t_str] = int(today_total_included)
+        _save(state)
 
-    # Compute delta if we have both yesterday and day-before
+    # Compute "yesterday sold" = (yesterday - day before yesterday)
     if y_str in daily and dby_str in daily:
-        delta = int(daily[y_str]) - int(daily[dby_str])
-    else:
-        delta = None
-
-    _save(state)
-    return delta
+        return int(daily[y_str]) - int(daily[dby_str])
+    return None

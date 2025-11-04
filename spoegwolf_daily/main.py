@@ -8,6 +8,7 @@ from .data_sources.plankton import get_event_summary
 from .data_sources.shopify import get_shopify_last7_summary
 from .summarize_af import build_message
 from .state import update_and_get_yesterday_delta
+from .senders.emailer import send_email_summary
 
 
 # ---- helpers (restored) ----
@@ -104,6 +105,9 @@ def run():
 
     msg = build_message(blocks, tz=CFG["TZ"], shopify=shop)
     print(msg)
+
+    subject = "Spoegwolf Daaglikse Opsomming"
+    send_email_summary(subject, msg)
 
 
 if __name__ == "__main__":
