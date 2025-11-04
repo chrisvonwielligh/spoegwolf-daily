@@ -5,8 +5,11 @@ load_dotenv()
 
 CFG = {
     "TZ": os.getenv("TZ", "Africa/Johannesburg"),
-    "PLANKTON_AUTH": os.getenv("PLANKTON_AUTH"),     # e.g., "Bearer abc123" or another scheme
-    "PLANKTON_COOKIE": os.getenv("PLANKTON_COOKIE"), # e.g., ".AspNetCore.Session=..."
+    "PLANKTON_AUTH": os.getenv("PLANKTON_AUTH"),
+    "PLANKTON_COOKIE": os.getenv("PLANKTON_COOKIE"),
+    # Shopify
+    "SHOPIFY_BASE": os.getenv("SHOPIFY_BASE"),
+    "SHOPIFY_ACCESS_TOKEN": os.getenv("SHOPIFY_ACCESS_TOKEN"),
 }
 
 # Shows we care about (string GUIDs). Capacity is your own target number.
