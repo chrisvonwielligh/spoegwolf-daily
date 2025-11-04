@@ -25,10 +25,14 @@ def build_message(shows_blocks, tz="Africa/Johannesburg") -> str:
         kids = b["kids"]
         goue = b["goue"]
         total = b["total"]
+        yday = b.get("yesterday")
+        days_to = b.get("days_to_event")
 
         pct = 0 if cap <= 0 else round(100 * total / cap)
 
         lines.append(f"{name}")
+        lines.append(f"Gister se verkope: {'NVT' if yday is None else yday}")
+        lines.append(f"Dae tot die show {'NVT' if days_to is None else days_to}")
         lines.append(f"GA (Adults): {ga}")
         lines.append(f"Kids Tickets: {kids}")
         lines.append(f"Goue Kraal: {goue}")

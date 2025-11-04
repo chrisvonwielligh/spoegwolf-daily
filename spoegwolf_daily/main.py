@@ -1,9 +1,12 @@
+from datetime import datetime
+import pytz
+
 from .config import CFG, SHOWS
 from .data_sources.plankton import get_event_summary
 from .summarize_af import build_message
+from .state import update_and_get_yesterday_delta
 
 def _norm(s: str) -> str:
-    # Tolerate extra spaces/case differences (e.g., "Honorary Ranger ")
     return (s or "").strip().lower()
 
 def _sum_by_names(ticket_info, wanted_names):
@@ -24,20 +27,59 @@ def _sum_excluded(ticket_info, exclude_names):
             total += int(t.get("ticketsIssued") or 0)
     return total
 
+def _event_date_za_date(event_iso: str, tz_name: str):
+    """
+    Parse Plankton EventDate (e.g., '2026-01-31T10:15:00' or with 'Z'/offset)
+    and return the event's DATE in Africa/Johannesburg.
+    """
+    if not event_iso:
+        return None
+    za = pytz.timezone(tz_name)
+    txt = event_iso.strip().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(txt)  # handles '+00:00' / offsets
+    except ValueError:
+        try:
+            dt = datetime.strptime(event_iso[:19], "%Y-%m-%dT%H:%M:%S")
+        except Exception:
+            return None
+    # If no timezone info, assume it's a local ZA timestamp
+    if dt.tzinfo is None:
+        dt = za.localize(dt)
+    else:
+        dt = dt.astimezone(za)
+    return dt.date()
+
+def _days_to_event_from_eventdate(event_iso: str, tz_name: str):
+    """
+    Whole-day difference (event_date - today_za_date).
+    Negative values mean the show is in the past.
+    """
+    ev_date = _event_date_za_date(event_iso, tz_name)
+    if ev_date is None:
+        return None
+    today = datetime.now(pytz.timezone(tz_name)).date()
+    return (ev_date - today).days
+
 def run():
     blocks = []
     for show in SHOWS:
         js = get_event_summary(show["event_guid"])
-        tinfo = js.get("TicketInfo", [])  # per your sample
+        tinfo = js.get("TicketInfo", [])
 
         groups = show.get("groups", {})
-        ga = _sum_by_names(tinfo, groups.get("GA (Adults)"))
+        ga   = _sum_by_names(tinfo, groups.get("GA (Adults)"))
         kids = _sum_by_names(tinfo, groups.get("Kids Tickets"))
         goue = _sum_by_names(tinfo, groups.get("Goue Kraal"))
-        excluded = _sum_excluded(tinfo, groups.get("exclude"))
+        _ = _sum_excluded(tinfo, groups.get("exclude"))  # excluded, not counted
 
-        # “Total” = included groups only (GA + Kids + Goue), excludes e.g. Physical, Honorary
-        total = ga + kids + goue
+        total_included = ga + kids + goue
+        yday_delta = update_and_get_yesterday_delta(
+            show["event_guid"], total_included, CFG["TZ"]
+        )
+
+        # <-- Extract directly from Plankton's EventDate field
+        days_to = _days_to_event_from_eventdate(js.get("EventDate"), CFG["TZ"])
 
         blocks.append({
             "name": show["name"],
@@ -45,10 +87,9 @@ def run():
             "ga": ga,
             "kids": kids,
             "goue": goue,
-            "total": total,
-            # Optional debugging fields:
-            # "excluded": excluded,
-            # "raw_total_ticketsIssued": int(js.get("TotalTicketsIssued") or 0),
+            "total": total_included,
+            "yesterday": yday_delta,
+            "days_to_event": days_to,
         })
 
     msg = build_message(blocks, tz=CFG["TZ"])
