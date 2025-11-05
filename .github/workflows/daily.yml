@@ -20,16 +20,21 @@ jobs:
       - name: Run summary + email
         env:
           TZ: Africa/Johannesburg
+          # Plankton
           PLANKTON_AUTH: ${{ secrets.PLANKTON_AUTH }}
           PLANKTON_COOKIE: ${{ secrets.PLANKTON_COOKIE }}
+          # Quicket
+          QUICKET_API_KEY: ${{ secrets.QUICKET_API_KEY }}
+          QUICKET_USERTOKEN: ${{ secrets.QUICKET_USERTOKEN }}
+          # Shopify
           SHOPIFY_BASE: ${{ secrets.SHOPIFY_BASE }}
           SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          # Email
           EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
           EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO:   ${{ secrets.EMAIL_TO }}
-          SNAP_DIR: data/snapshots
         run: |
           . .venv/bin/activate
           python -m spoegwolf_daily.main
