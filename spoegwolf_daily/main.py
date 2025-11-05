@@ -7,8 +7,8 @@ from .config import CFG, SHOWS
 from .data_sources.plankton import get_event_summary
 from .data_sources.shopify import get_shopify_last7_summary
 from .summarize_af import build_message
-from .state import update_and_get_yesterday_delta
 from .senders.emailer import send_email_summary
+from .snapshot_store import yesterday_delta
 
 
 # ---- helpers (restored) ----
@@ -62,6 +62,61 @@ def _days_to_event_from_eventdate(event_iso: str, tz_name: str):
         return None
     today = datetime.now(pytz.timezone(tz_name)).date()
     return (ev_date - today).days
+
+
+def generate_summary_text() -> str:
+    """
+    Build and return the full summary message without sending email.
+    Safe for testing: read-only (no writes).
+    """
+    blocks = []
+    for show in SHOWS:
+        try:
+            js = get_event_summary(show["event_guid"])
+            tinfo = js.get("TicketInfo", [])
+
+            groups = show.get("groups", {})
+            ga   = _sum_by_names(tinfo, groups.get("GA (Adults)"))
+            kids = _sum_by_names(tinfo, groups.get("Kids Tickets"))
+            goue = _sum_by_names(tinfo, groups.get("Goue Kraal"))
+            total_included = ga + kids + goue
+
+            days_to = _days_to_event_from_eventdate(js.get("EventDate"), CFG["TZ"])
+
+            from .snapshot_store import yesterday_delta
+            yday_delta = yesterday_delta(show["event_guid"], CFG["TZ"])
+
+            blocks.append({
+                "name": show["name"],
+                "capacity": show["capacity"],
+                "ga": ga,
+                "kids": kids,
+                "goue": goue,
+                "total": total_included,
+                "yesterday": yday_delta,
+                "days_to_event": days_to,
+            })
+        except Exception as e:
+            # Show a stub block with the error, but keep the rest of the summary
+            blocks.append({
+                "name": f"{show['name']} (kon nie laai nie)",
+                "capacity": show["capacity"],
+                "ga": 0, "kids": 0, "goue": 0, "total": 0,
+                "yesterday": None,
+                "days_to_event": None,
+            })
+            # Print to console so you see why during tests
+            print(f"[WARN] Plankton fetch failed for {show['name']}: {e}")
+
+    # Shopify block (kept exactly as in run)
+    shop = None
+    if CFG.get("SHOPIFY_BASE") and CFG.get("SHOPIFY_ACCESS_TOKEN"):
+        from .data_sources.shopify import get_shopify_last7_summary
+        shop = get_shopify_last7_summary()
+
+    return build_message(blocks, tz=CFG["TZ"], shopify=shop)
+
+
 # ---- end helpers ----
 
 
@@ -80,9 +135,7 @@ def run():
         total_included = ga + kids + goue
 
         # store today’s snapshot and compute "yesterday" delta
-        yday_delta = update_and_get_yesterday_delta(
-            show["event_guid"], total_included, CFG["TZ"]
-        )
+        yday_delta = yesterday_delta(show["event_guid"], CFG["TZ"])
 
         # days to event from EventDate
         days_to = _days_to_event_from_eventdate(js.get("EventDate"), CFG["TZ"])
@@ -111,4 +164,13 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+    parser = argparse.ArgumentParser(description="Spoegwolf Daily Summary")
+    parser.add_argument("--no-email", action="store_true",
+                        help="Generate and print the summary without sending email (testing mode)")
+    args = parser.parse_args()
+
+    if args.no_email:
+        print(generate_summary_text())
+    else:
+        run()

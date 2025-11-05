@@ -1,0 +1,48 @@
+name: Snapshot ticket totals (nightly)
+
+on:
+  schedule:
+    - cron: "50 21 * * *"   # 21:50 UTC = 23:50 Africa/Johannesburg
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Install deps
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Run snapshot (read Plankton, write JSON files)
+        env:
+          TZ: Africa/Johannesburg
+          PLANKTON_AUTH: ${{ secrets.PLANKTON_AUTH }}
+          PLANKTON_COOKIE: ${{ secrets.PLANKTON_COOKIE }}
+          SNAP_DIR: data/snapshots
+        run: |
+          . .venv/bin/activate
+          python -m spoegwolf_daily.cron_snapshot
+
+      - name: Commit snapshots if changed
+        run: |
+          set -e
+          if git status --porcelain | grep -q "^ M\\|^\\?\\?"; then
+            git config user.name "spoegwolf-bot"
+            git config user.email "spoegwolf@example.com"
+            git add data/snapshots/*.json
+            git commit -m "snapshot: update totals $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            git push
+          else
+            echo "No snapshot changes."
+          fi
