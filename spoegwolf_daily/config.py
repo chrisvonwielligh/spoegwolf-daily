@@ -16,7 +16,58 @@ CFG = {
     "EMAIL_USER": os.getenv("EMAIL_USER"),
     "EMAIL_PASS": os.getenv("EMAIL_PASS"),
     "EMAIL_TO":   os.getenv("EMAIL_TO"),  # comma-separated list
+        # --- Quicket ---
+    "QUICKET_API_KEY": os.getenv("QUICKET_API_KEY"),
+    "QUICKET_USERTOKEN": os.getenv("QUICKET_USERTOKEN"),
 }
+
+# You’ll manually maintain this list (like SHOWS)
+# Example structure; update names/capacities/types to your real events:
+QUICKET_EVENTS = [
+    # {
+    #   "id": 329997,
+    #   "name": "Your Quicket Show",
+    #   "capacity": 10000,
+    #   "groups": {
+    #       "Adults": ["Algemene Toegang","Adult GA"],
+    #       "Kids":   ["Kinders","Kids"],
+    #       "exclude":["Honorary","Complimentary","Merchandise"]  # optional
+    #   }
+    # },
+    {
+      "id": 342395,
+      "name": "Stanford Hills",
+      "capacity": 1200,
+      "event_date": "2025-12-16",  # optional override
+      "groups": {
+          "Adults": ["General Admission"],
+          "Kids":   ["Kids Under 13"],
+          "exclude":["Honorary","Complimentary","Merchandise"]  # optional
+      }
+    },
+    {
+      "id": 342479,
+      "name": "Stilbaai (2 aande)",
+      "capacity": 1000,
+      "event_date": "2025-12-17",  # optional override
+      "groups": {
+          "Adults": ["Algemene Toegang"],
+          "Kids":   ["Kids Under 13"],
+          "exclude":["Honorary","Complimentary","Merchandise"]  # optional
+      }
+    },
+    {
+      "id": 344383,
+      "name": "NYE Daisy Jones",
+      "capacity": 550,
+      "event_date": "2025-12-31",  # optional override
+      "groups": {
+          "Adults": ["Algemene Toegang", "VIP Balkon"],
+          "Kids":   ["Kids Under 13"],
+          "exclude":["Honorary","Complimentary","Merchandise"]  # optional
+      }
+    },
+]
 
 # Shows we care about (string GUIDs). Capacity is your own target number.
 SHOWS = [

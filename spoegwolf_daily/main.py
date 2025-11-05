@@ -3,7 +3,8 @@
 from datetime import datetime
 import pytz
 
-from .config import CFG, SHOWS
+from .config import CFG, SHOWS, QUICKET_EVENTS
+from .data_sources.quicket import summarize_event as quicket_summarize, get_event_date_first_page
 from .data_sources.plankton import get_event_summary
 from .data_sources.shopify import get_shopify_last7_summary
 from .summarize_af import build_message
@@ -108,15 +109,61 @@ def generate_summary_text() -> str:
             # Print to console so you see why during tests
             print(f"[WARN] Plankton fetch failed for {show['name']}: {e}")
 
+    # ---- Quicket blocks ----
+    quicket_blocks = []
+    for ev in QUICKET_EVENTS:
+        ev_id = ev["id"]
+        name = ev["name"]
+        capacity = int(ev.get("capacity", 0))
+        groups = ev.get("groups", {})
+
+        sums = quicket_summarize(ev_id, groups)
+        adults = int(sums["adults"])
+        kids = int(sums["kids"])
+        total_included = int(sums["total"])
+
+        # Yesterday delta from snapshots (read-only), namespaced key
+        yday = yesterday_delta(f"quicket:{ev_id}", CFG["TZ"])
+
+        # Event date: prefer manual override (YYYY-MM-DD), else probe first page
+        qdate = None
+        override_date = ev.get("event_date_date")  # "YYYY-MM-DD"
+        if override_date:
+            try:
+                qdate = datetime.strptime(override_date, "%Y-%m-%d").date()
+            except Exception:
+                qdate = None
+        if qdate is None:
+            qdate = get_event_date_first_page(ev_id, CFG["TZ"])
+
+        days_to = _days_to(qdate, CFG["TZ"])
+
+        quicket_blocks.append({
+            "name": name,
+            "capacity": capacity,
+            "ga": adults,
+            "kids": kids,
+            "goue": 0,
+            "total": total_included,
+            "yesterday": yday,
+            "days_to_event": days_to,
+        })
+
     # Shopify block (kept exactly as in run)
     shop = None
     if CFG.get("SHOPIFY_BASE") and CFG.get("SHOPIFY_ACCESS_TOKEN"):
         from .data_sources.shopify import get_shopify_last7_summary
         shop = get_shopify_last7_summary()
 
-    return build_message(blocks, tz=CFG["TZ"], shopify=shop)
+    msg = build_message(blocks, tz=CFG["TZ"], shopify=shop, quicket=quicket_blocks)
+    return msg
 
 
+def _days_to(d, tz_name: str):
+    if not d:
+        return None
+    today = datetime.now(pytz.timezone(tz_name)).date()
+    return (d - today).days
 # ---- end helpers ----
 
 
