@@ -18,9 +18,9 @@ SNAP_DIR = os.getenv("SNAP_DIR", "data/snapshots")
 # --- Your backfill data (edit here if needed) ---
 BACKFILL_DATE_INPUT = "2025/11/04"  # will be converted to "2025-11-04"
 BACKFILL: Dict[int, int] = {
-    342395: 231,
-    342479: 200,
-    344383: 23,
+    342395: 238,
+    342479: 227,
+    344383: 25,
 }
 # -----------------------------------------------
 
