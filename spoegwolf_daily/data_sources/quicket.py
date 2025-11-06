@@ -22,10 +22,6 @@ def _headers() -> Dict[str, str]:
         "User-Agent": "spoegwolf-daily/1.0",
     }
 
-def _timeouts() -> Tuple[float, float]:
-    ct = float(os.getenv("REQUEST_CONNECT_TIMEOUT", "5"))
-    rt = float(os.getenv("REQUEST_READ_TIMEOUT", "15"))
-    return (ct, rt)
 
 def _get_page(event_id: int, page: int, page_size: int = 500) -> Dict[str, Any]:
     # The API returns "pages" and "pageSize" in the envelope; typical params: page & pagesize
@@ -33,6 +29,26 @@ def _get_page(event_id: int, page: int, page_size: int = 500) -> Dict[str, Any]:
     r = requests.get(url, headers=_headers(), timeout=_timeouts())
     r.raise_for_status()
     return r.json()
+
+def _safe_int_env(name: str, default: int) -> int:
+    v = os.getenv(name, "")
+    try:
+        return int(v) if v.strip() != "" else default
+    except Exception:
+        return default
+
+def _safe_float_env(name: str, default: float) -> float:
+    v = os.getenv(name, "")
+    try:
+        return float(v) if v.strip() != "" else default
+    except Exception:
+        return default
+
+def _timeouts() -> Tuple[float, float]:
+    ct = _safe_float_env("REQUEST_CONNECT_TIMEOUT", 5.0)
+    rt = _safe_float_env("REQUEST_READ_TIMEOUT", 15.0)
+    return (ct, rt)
+
 
 def iter_all_guests(event_id: int) -> Iterable[Dict[str, Any]]:
     """

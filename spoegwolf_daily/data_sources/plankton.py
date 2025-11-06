@@ -1,13 +1,26 @@
-# spoegwolf_daily/data_sources/plankton.py
 import os, time, requests
 from typing import Dict, Any
 from ..config import CFG
 
 BASE = "https://plankton.mobi"
 
+def _safe_int_env(name: str, default: int) -> int:
+    v = os.getenv(name, "")
+    try:
+        return int(v) if v.strip() != "" else default
+    except Exception:
+        return default
+
+def _safe_float_env(name: str, default: float) -> float:
+    v = os.getenv(name, "")
+    try:
+        return float(v) if v.strip() != "" else default
+    except Exception:
+        return default
+
 def _headers() -> Dict[str, str]:
     if not CFG["PLANKTON_AUTH"]:
-        raise RuntimeError("Missing PLANKTON_AUTH in .env")
+        raise RuntimeError("Missing PLANKTON_AUTH in .env/Secrets")
     h = {
         "Accept": "application/json",
         "Authorization": CFG["PLANKTON_AUTH"],
@@ -18,19 +31,15 @@ def _headers() -> Dict[str, str]:
     return h
 
 def _timeouts():
-    # tuple: (connect, read)
-    ct = float(os.getenv("REQUEST_CONNECT_TIMEOUT", "5"))
-    rt = float(os.getenv("REQUEST_READ_TIMEOUT", "15"))
+    # (connect, read)
+    ct = _safe_float_env("REQUEST_CONNECT_TIMEOUT", 5.0)
+    rt = _safe_float_env("REQUEST_READ_TIMEOUT", 15.0)
     return (ct, rt)
 
 def get_event_summary(event_guid: str) -> Dict[str, Any]:
-    """
-    GET /api/v2/events/summary/{guid}
-    Fast-fail with retries + clear diagnostics.
-    """
     url = f"{BASE}/api/v2/events/summary/{event_guid}"
     headers = _headers()
-    retries = int(os.getenv("REQUEST_RETRIES", "2"))
+    retries = _safe_int_env("REQUEST_RETRIES", 2)
     backoff = 1.5
 
     last_err = None
@@ -40,17 +49,13 @@ def get_event_summary(event_guid: str) -> Dict[str, Any]:
             r.raise_for_status()
             return r.json()
         except requests.HTTPError as e:
-            # HTTP reached but not OK — include short body preview
             body = (r.text or "")[:300].replace("\n", " ") if "r" in locals() else ""
             raise RuntimeError(
-                f"Plankton [{r.status_code} {r.reason}] for {event_guid} — {body}"
+                f"Plankton [{getattr(r,'status_code', '?')} {getattr(r,'reason','?')}] at {url} — {body}"
             ) from e
         except requests.RequestException as e:
-            # DNS/connect/read timeout, TLS issues, etc.
             last_err = e
             if attempt < retries:
                 time.sleep(backoff ** attempt)
                 continue
-            raise RuntimeError(
-                f"Plankton request error for {event_guid} at {url}: {e}"
-            ) from e
+            raise RuntimeError(f"Plankton request error at {url}: {e}") from e

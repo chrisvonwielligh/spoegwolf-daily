@@ -33,10 +33,6 @@ jobs:
             # Quicket
             QUICKET_API_KEY: ${{ secrets.QUICKET_API_KEY }}
             QUICKET_USERTOKEN: ${{ secrets.QUICKET_USERTOKEN }}
-            # (optional) timeouts
-            REQUEST_CONNECT_TIMEOUT: ${{ secrets.REQUEST_CONNECT_TIMEOUT }}
-            REQUEST_READ_TIMEOUT: ${{ secrets.REQUEST_READ_TIMEOUT }}
-            REQUEST_RETRIES: ${{ secrets.REQUEST_RETRIES }}
         run: |
           . .venv/bin/activate
           python -m spoegwolf_daily.cron_snapshot
