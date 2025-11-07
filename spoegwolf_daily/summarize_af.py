@@ -25,7 +25,7 @@ def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=
         lines.append("")  # blank line gap
 
     # ===== Plankton (your own shows) =====
-    lines.append("🎟️ *Kaartjies vir eie shows*")
+    lines.append("🎟️ PLANKTON")
     lines.append("")
     for b in shows_blocks:
         name = b["name"]; cap = b["capacity"]
@@ -47,7 +47,7 @@ def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=
 
     # ===== Quicket (if any) =====
     if quicket:
-        lines.append("🎟️ *Quicket shows*")
+        lines.append("🎟️ QUICKET")
         lines.append("")
         for b in quicket:
             name = b["name"]; cap = b["capacity"]
