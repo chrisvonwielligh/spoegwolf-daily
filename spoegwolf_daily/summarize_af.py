@@ -9,17 +9,24 @@ def _af_date(dt: datetime) -> str:
     dname = _DAYS[dt.weekday()]
     return f"{dname}, {dt.day:02d} {_MONTHS[dt.month-1]} {dt.year}"
 
+# spoegwolf_daily/summarize_af.py
+
 def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=None) -> str:
-    za = pytz.timezone(tz)
-    today = datetime.now(za)
-    stamp = _af_date(today)
-
     lines = []
-    lines.append(f"Spoegwolf Daaglikse Opsomming — {stamp}\n")
-    lines.append("🎟️ *Kaartjies vir eie shows*\n")
 
-    # PLANKTON
-    lines.append("PLANKTON\n")
+    # ===== Shopify first =====
+    if shopify:
+        lines.append("🛒 *Shopify Online Store*")
+        lines.append(f"Yesterdays Sales: R{shopify['yesterday_sales']:.2f}")
+        lines.append(f"Sales this week: R{shopify['gross_sales']:.2f}")
+        if shopify.get("top_item"):
+            ti = shopify["top_item"]
+            lines.append(f"Top Selling Item: {ti['title']} (x{ti['qty']})")
+        lines.append("")  # blank line gap
+
+    # ===== Plankton (your own shows) =====
+    lines.append("🎟️ *Kaartjies vir eie shows*")
+    lines.append("")
     for b in shows_blocks:
         name = b["name"]; cap = b["capacity"]
         ga = b["ga"]; kids = b["kids"]; goue = b["goue"]
@@ -35,11 +42,13 @@ def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=
         if goue:
             lines.append(f"Goue Kraal: {goue}")
         lines.append(f"Total Sold: {total}")
-        lines.append(f"Sold Out % (Uit {cap:,}): {pct}%\n")
+        lines.append(f"Sold Out % (Uit {cap:,}): {pct}%")
+        lines.append("")
 
-    # --- NEW: Quicket section (if present) ---
+    # ===== Quicket (if any) =====
     if quicket:
-        lines.append("QUICKET\n")
+        lines.append("🎟️ *Quicket shows*")
+        lines.append("")
         for b in quicket:
             name = b["name"]; cap = b["capacity"]
             ga = b["ga"]; kids = b["kids"]; goue = b["goue"]
@@ -55,14 +64,7 @@ def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=
             if goue:
                 lines.append(f"Goue Kraal: {goue}")
             lines.append(f"Total Sold: {total}")
-            lines.append(f"Sold Out % (Uit {cap:,}): {pct}%\n")
+            lines.append(f"Sold Out % (Uit {cap:,}): {pct}%")
+            lines.append("")
 
-    # Shopify (unchanged)
-    if shopify:
-        lines.append("🛒 *Shopify Online Store*\n")
-        lines.append(f"Sales in last 7 days: R{shopify['gross_sales']:.2f}")
-        if shopify.get("top_item"):
-            ti = shopify["top_item"]
-            lines.append(f"Top selling item: {ti['title']} (x{ti['qty']})\n")
-
-    return "\n".join(lines).rstrip()  # tidy end
+    return "\n".join(lines).rstrip()

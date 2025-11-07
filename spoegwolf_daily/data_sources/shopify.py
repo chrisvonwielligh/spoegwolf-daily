@@ -1,162 +1,190 @@
 # spoegwolf_daily/data_sources/shopify.py
-"""
-Shopify REST Admin fetcher:
-- "Sales in last 7 days" (gross excluding shipping)
-- "Top selling item" by quantity (last 7 days)
-
-Assumptions:
-- Store currency is ZAR (or you accept store currency as-is).
-- Uses REST Admin API with a private/custom app access token.
-- Pagination via Link headers.
-"""
-
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
-from typing import Dict, Any, Optional
-import time
+
+import os
 import requests
+import datetime as dt
+from typing import Dict, Any, List, Optional
+import pytz
+from urllib.parse import urlparse
 
 from ..config import CFG
 
+# -------------------- config + helpers --------------------
+
+def _normalize_base(raw: Optional[str]) -> str:
+    """
+    Accepts 'spoegwolf-2.myshopify.com' OR 'https://spoegwolf-2.myshopify.com[/anything]'
+    and returns just 'spoegwolf-2.myshopify.com'.
+    """
+    if not raw:
+        return ""
+    raw = raw.strip()
+    if raw.startswith("http://") or raw.startswith("https://"):
+        parsed = urlparse(raw)
+        return (parsed.netloc or "").strip()
+    # remove any accidental path fragments
+    return raw.split("/")[0].strip()
+
+BASE = _normalize_base(CFG.get("SHOPIFY_BASE"))
+TOKEN = CFG.get("SHOPIFY_ACCESS_TOKEN")
+# Use one API version. You can override via env secret SHOPIFY_API_VERSION.
+API_VER = os.getenv("SHOPIFY_API_VERSION", "2024-10")
 
 def _headers() -> Dict[str, str]:
-    tok = CFG.get("SHOPIFY_ACCESS_TOKEN")
-    if not tok:
-        raise RuntimeError("Missing SHOPIFY_ACCESS_TOKEN in .env")
+    if not BASE or not TOKEN:
+        raise RuntimeError("Missing SHOPIFY_BASE or SHOPIFY_ACCESS_TOKEN")
     return {
-        "X-Shopify-Access-Token": tok,
+        "X-Shopify-Access-Token": TOKEN,
         "Accept": "application/json",
         "User-Agent": "spoegwolf-daily/1.0",
     }
 
+def _orders_url() -> str:
+    # Build a clean base URL: https://<host>/admin/api/<ver>/orders.json
+    return f"https://{BASE}/admin/api/{API_VER}/orders.json"
 
-def _orders_url(start_iso_utc: str) -> str:
-    base = (CFG.get("SHOPIFY_BASE") or "").rstrip("/")
-    if not base:
-        raise RuntimeError("Missing SHOPIFY_BASE in .env")
-    # We keep it simple: created_at_min filters last 7 days in UTC
-    return f"{base}/orders.json?status=any&limit=250&created_at_min={start_iso_utc}"
-
-
-def _parse_link_next(link_header: Optional[str]) -> Optional[str]:
+def _iso_utc(dt_local: dt.datetime, tz_name: str) -> str:
     """
-    Extract the 'next' URL from Shopify's Link header.
-    Example:
-      <https://.../orders.json?page_info=XYZ&limit=250>; rel="next"
+    Return an ISO UTC string for a datetime that may be naive (no tz) or aware.
+    If naive: treat it as tz_name local time. If aware: convert from its tz.
     """
-    if not link_header:
-        return None
-    parts = [p.strip() for p in link_header.split(",")]
-    for p in parts:
-        if 'rel="next"' in p:
-            start = p.find("<") + 1
-            end = p.find(">")
-            if 0 < start < end:
-                return p[start:end]
-    return None
+    tz = pytz.timezone(tz_name)
+    if dt_local.tzinfo is None:
+        loc = tz.localize(dt_local)
+    else:
+        loc = dt_local.astimezone(tz)
+    return loc.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+# -------------------- order parsing --------------------
 
-def _to_float(x: Any, default: float = 0.0) -> float:
-    try:
-        return float(x)
-    except Exception:
-        return default
-
-
-def _shipping_amount(order: Dict[str, Any]) -> float:
+def _sum_order_subtotal(order: Dict[str, Any]) -> float:
     """
-    Prefer total_shipping_price_set.shop_money.amount; fallback to sum of shipping_lines[].price.
+    Return amount excluding shipping.
+    Prefer 'current_subtotal_price' or 'subtotal_price' or 'total_line_items_price'.
+    Fallback: sum line items price * quantity.
     """
-    ship_total = 0.0
+    for k in ("current_subtotal_price", "subtotal_price", "total_line_items_price"):
+        v = order.get(k)
+        if v is not None:
+            try:
+                return float(v)
+            except Exception:
+                pass
 
-    # Preferred modern field
-    try:
-        ship_total = _to_float(order.get("total_shipping_price_set", {})
-                                    .get("shop_money", {})
-                                    .get("amount"))
-    except Exception:
-        ship_total = 0.0
-
-    # Fallback for older responses if preferred field absent or zero
-    if not ship_total:
+    total = 0.0
+    for li in (order.get("line_items") or []):
         try:
-            lines = order.get("shipping_lines") or []
-            ship_total = sum(_to_float(s.get("price")) for s in lines)
+            total += float(li.get("price", 0.0)) * int(li.get("quantity", 0))
         except Exception:
-            ship_total = 0.0
+            continue
+    return total
 
-    return max(0.0, ship_total)
-
-
-def _net_order_total_excl_shipping(order: Dict[str, Any]) -> float:
+def _pick_top_item(orders: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """
-    Gross (total_price) minus shipping.
-    Note: This does NOT subtract refunds; if you want net of refunds,
-    we can extend this to query refunds per order.
+    Return {'title': str, 'qty': int} for the most-sold line item in the provided orders.
+    Uses quantity across all orders (7-day window).
     """
-    total_price = _to_float(order.get("total_price"))
-    ship_price = _shipping_amount(order)
-    net = total_price - ship_price
-    return max(0.0, net)
+    counts: Dict[str, int] = {}
+    for o in orders:
+        for li in (o.get("line_items") or []):
+            title = (li.get("title") or "").strip()
+            qty = int(li.get("quantity") or 0)
+            if not title or qty <= 0:
+                continue
+            counts[title] = counts.get(title, 0) + qty
+    if not counts:
+        return None
+    title = max(counts, key=counts.get)
+    return {"title": title, "qty": counts[title]}
 
+# -------------------- API calls --------------------
+
+def _fetch_orders(created_min_iso: str, created_max_iso: str, status: str = "paid") -> List[Dict[str, Any]]:
+    """
+    Fetch orders in [created_min, created_max] using REST with cursor pagination.
+    We request 250 per page and follow Link headers (page_info).
+    """
+    orders: List[Dict[str, Any]] = []
+    params = {
+        "limit": 250,
+        "status": "any",              # include all, then filter by financial_status
+        "financial_status": status,   # paid only (you can change to 'any' if needed)
+        "created_at_min": created_min_iso,
+        "created_at_max": created_max_iso,
+        "fields": ",".join([
+            "id","created_at","currency",
+            "current_subtotal_price","subtotal_price","total_line_items_price",
+            "line_items","financial_status","cancelled_at"
+        ]),
+    }
+
+    session = requests.Session()
+    url = _orders_url()
+    headers = _headers()
+
+    while True:
+        r = session.get(url, headers=headers, params=params, timeout=(5, 15))
+        r.raise_for_status()
+        data = r.json() or {}
+        batch = data.get("orders") or []
+        orders.extend(batch)
+
+        # Pagination via Link header (absolute URL)
+        link = r.headers.get("Link", "")
+        if 'rel="next"' in link:
+            try:
+                part = [p for p in link.split(",") if 'rel="next"' in p][0]
+                url = part.split(";")[0].strip().strip("<>")  # absolute URL with page_info
+                params = None  # subsequent call uses the absolute URL (no extra params)
+                continue
+            except Exception:
+                pass
+        break
+
+    # Filter: paid / partially paid, not cancelled
+    clean: List[Dict[str, Any]] = []
+    for o in orders:
+        if o.get("cancelled_at"):
+            continue
+        if (o.get("financial_status") or "").lower() not in ("paid", "partially_paid"):
+            continue
+        clean.append(o)
+    return clean
+
+# -------------------- public API --------------------
 
 def get_shopify_last7_summary() -> Dict[str, Any]:
     """
     Returns:
       {
-        "orders": int,
-        "gross_sales": float,     # shipping excluded
-        "top_item": {"title": str, "qty": int} or None
+        'yesterday_sales': float,  # ZAR, excl. shipping
+        'gross_sales': float,      # last 7 days rolling, excl. shipping
+        'top_item': {'title': str, 'qty': int} | None
       }
     """
-    # Start timestamp (UTC) for last 7 days
-    start_utc = (datetime.now(timezone.utc) - timedelta(days=7)).replace(microsecond=0)
-    start_iso = start_utc.isoformat().replace("+00:00", "Z")
+    tz = CFG.get("TZ", "Africa/Johannesburg")
+    za = pytz.timezone(tz)
+    today = dt.datetime.now(za).date()
 
-    url = _orders_url(start_iso)
-    headers = _headers()
+    # Yesterday (00:00–23:59 local)
+    y0 = dt.datetime.combine(today - dt.timedelta(days=1), dt.time(0, 0, 0))
+    y1 = dt.datetime.combine(today - dt.timedelta(days=1), dt.time(23, 59, 59))
 
-    total_orders = 0
-    gross_excl_shipping = 0.0
-    item_counts: Dict[str, int] = {}
+    # Last 7 days window (rolling, up to now)
+    w0 = dt.datetime.combine(today - dt.timedelta(days=6), dt.time(0, 0, 0))
+    w1 = dt.datetime.now(za).replace(microsecond=0)
 
-    # Basic loop with simple retry on 429 (rate limit)
-    while url:
-        for attempt in range(3):
-            resp = requests.get(url, headers=headers, timeout=30)
-            if resp.status_code == 429:  # rate limited
-                # Back off briefly and retry
-                time.sleep(2 + attempt)
-                continue
-            resp.raise_for_status()
-            break  # OK
+    y_orders = _fetch_orders(_iso_utc(y0, tz), _iso_utc(y1, tz))
+    w_orders = _fetch_orders(_iso_utc(w0, tz), _iso_utc(w1, tz))
 
-        data = resp.json() if resp.content else {}
-        orders = data.get("orders", [])
-        total_orders += len(orders)
+    y_total = sum(_sum_order_subtotal(o) for o in y_orders)
+    w_total = sum(_sum_order_subtotal(o) for o in w_orders)
 
-        for o in orders:
-            # Accumulate product-only gross (exclude shipping)
-            gross_excl_shipping += _net_order_total_excl_shipping(o)
-
-            # Count items by title (quantity)
-            for li in (o.get("line_items") or []):
-                title = (li.get("title") or "Unknown item").strip() or "Unknown item"
-                qty = int(li.get("quantity") or 0)
-                if qty > 0:
-                    item_counts[title] = item_counts.get(title, 0) + qty
-
-        url = _parse_link_next(resp.headers.get("Link"))
-
-    # Determine top-selling item
-    if item_counts:
-        top_title, top_qty = max(item_counts.items(), key=lambda kv: kv[1])
-        top_item = {"title": top_title, "qty": int(top_qty)}
-    else:
-        top_item = None
+    top_item = _pick_top_item(w_orders)
 
     return {
-        "orders": int(total_orders),
-        "gross_sales": round(gross_excl_shipping, 2),
+        "yesterday_sales": float(round(y_total, 2)),
+        "gross_sales": float(round(w_total, 2)),
         "top_item": top_item,
     }
