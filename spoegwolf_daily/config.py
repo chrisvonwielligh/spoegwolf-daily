@@ -69,7 +69,7 @@ QUICKET_EVENTS = [
       }
     },
         {
-      "id": 344383,
+      "id": 349783,
       "name": "Snowflake Potch",
       "capacity": 2000,
       "event_date": "2026-02-21",  # optional override
