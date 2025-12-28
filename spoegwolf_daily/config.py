@@ -35,28 +35,7 @@ QUICKET_EVENTS = [
     #   }
     # },
 
-    {
-      "id": 342395,
-      "name": "Stanford Hills",
-      "capacity": 1200,
-      "event_date": "2025-12-16",  # optional override
-      "groups": {
-          "Adults": ["General Admission"],
-          "Kids":   ["Kids Under 13"],
-          "exclude":["Honorary","Complimentary","Merchandise"]  # optional
-      }
-    },
-    {
-      "id": 342479,
-      "name": "Stilbaai (2 aande)",
-      "capacity": 1000,
-      "event_date": "2025-12-17",  # optional override
-      "groups": {
-          "Adults": ["Algemene Toegang"],
-          "Kids":   ["Kids Under 13"],
-          "exclude":["Honorary","Complimentary","Merchandise"]  # optional
-      }
-    },
+ 
     {
       "id": 344383,
       "name": "NYE Daisy Jones",
