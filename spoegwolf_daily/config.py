@@ -36,17 +36,7 @@ QUICKET_EVENTS = [
     # },
 
  
-    {
-      "id": 344383,
-      "name": "NYE Daisy Jones",
-      "capacity": 550,
-      "event_date": "2025-12-31",  # optional override
-      "groups": {
-          "Adults": ["Algemene Toegang", "VIP Balkon"],
-          "Kids":   ["Kids Under 13"],
-          "exclude":["Honorary","Complimentary","Merchandise"]  # optional
-      }
-    },
+
         {
       "id": 349783,
       "name": "Snowflake Potch",
@@ -67,6 +57,31 @@ SHOWS = [
         "name": "Droomland Kaap",
         "event_guid": "df6e673e-445c-4b75-87e8-790eedc82f0e",  # replace if needed
         "capacity": 3500,
+        # Group mapping for this event: exact names (case/space tolerant)
+        "groups": {
+            "GA (Adults)": [
+                "Early Bird",
+                "Phase 1",
+                "Phase 2",
+                "Phase 3",
+                "Phase 4",
+            ],
+            "Kids Tickets": [
+                "Kids Under 12",
+                "Kids Under 18",
+            ],
+            "Goue Kraal": [
+                "Goue Kraal (VIP)",
+            ],
+            "exclude": [
+
+            ],
+        },
+    },
+     {
+        "name": "Loftus Park Pretoria",
+        "event_guid": "5aa195ca-dd0f-4e35-b4e6-acb06cbefd83",  # replace if needed
+        "capacity": 2000,
         # Group mapping for this event: exact names (case/space tolerant)
         "groups": {
             "GA (Adults)": [
