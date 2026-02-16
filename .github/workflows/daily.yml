@@ -29,6 +29,8 @@ jobs:
           # Shopify
           SHOPIFY_BASE: ${{ secrets.SHOPIFY_BASE }}
           SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          #itickets
+          ITICKETS_FEED_OYS: ${{ secrets.ITICKETS_FEED_OYS }}
           # Email
           EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
           EMAIL_PORT: ${{ secrets.EMAIL_PORT }}

@@ -33,6 +33,8 @@ jobs:
             # Quicket
             QUICKET_API_KEY: ${{ secrets.QUICKET_API_KEY }}
             QUICKET_USERTOKEN: ${{ secrets.QUICKET_USERTOKEN }}
+            #itickets
+            ITICKETS_FEED_OYS: ${{ secrets.ITICKETS_FEED_OYS }}
         run: |
           . .venv/bin/activate
           python -m spoegwolf_daily.cron_snapshot

@@ -105,3 +105,13 @@ SHOWS = [
     # },
     # Add more shows with their own groups here if needed
 ]
+
+ITICKETS_EVENTS = [
+    {
+        "eid": "485051",
+        "name": "Spoegwolf op Ys 2026 (iTickets)",
+        "capacity": 8000,  # set later if you know cap
+        "event_date_date": "2026-07-10",
+        "feed_url_env": "ITICKETS_FEED_OYS",  # GitHub secret name (full URL)
+    }
+]

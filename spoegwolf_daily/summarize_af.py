@@ -11,7 +11,7 @@ def _af_date(dt: datetime) -> str:
 
 # spoegwolf_daily/summarize_af.py
 
-def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=None) -> str:
+def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=None, itickets=None) -> str:
     lines = []
 
     # ===== Shopify first =====
@@ -65,6 +65,34 @@ def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=
                 lines.append(f"Goue Kraal: {goue}")
             lines.append(f"Total Sold: {total}")
             lines.append(f"Sold Out % (Uit {cap:,}): {pct}%")
+            lines.append("")
+
+        # ===== iTickets =====
+    if itickets:
+        lines.append("🎟️ *iTickets shows*")
+        lines.append("")
+        for b in itickets:
+            name = b["name"]
+            cap = int(b.get("capacity", 0))
+            yday = b.get("yesterday")
+            days_to = b.get("days_to_event")
+
+            normal = int(b.get("normal", 0))
+            vip = int(b.get("vip", 0))
+            total = int(b.get("total", normal + vip))
+
+            lines.append(f"{name}")
+            lines.append(f"Gister se verkope: {'NVT' if yday is None else yday}")
+            if days_to is not None:
+                lines.append(f"dae tot die show: {days_to}")
+            lines.append(f"Normal: {normal}")
+            lines.append(f"VIP: {vip}")
+            lines.append(f"Total Sold: {total}")
+
+            if cap > 0:
+                pct = round(100 * total / cap)
+                lines.append(f"Sold Out % (Uit {cap:,}): {pct}%")
+
             lines.append("")
 
     return "\n".join(lines).rstrip()

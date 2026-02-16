@@ -1,7 +1,9 @@
-from .config import CFG, SHOWS, QUICKET_EVENTS
+from .config import CFG, SHOWS, QUICKET_EVENTS, ITICKETS_EVENTS
 from .data_sources.plankton import get_event_summary
 from .snapshot_store import save_snapshot
 from .data_sources.quicket import summarize_event as quicket_summarize  # <-- add
+from .data_sources.itickets import fetch_itickets_csv_via_curl, summarize_itickets_total
+import os
 
 from datetime import datetime
 import pytz
@@ -46,6 +48,22 @@ def run():
         key = f"quicket:{ev_id}"
         changed = save_snapshot(key, today_str, total_included)
         print(f"[snapshot][quicket] {name} {today_str} = {total_included} ({'saved' if changed else 'unchanged'})")
+
+    # --- ITICKETS (new) ---
+    for ev in ITICKETS_EVENTS:
+        eid = str(ev["eid"])
+        name = ev["name"]
+        url = os.getenv(ev["feed_url_env"], "")
+        if not url:
+            raise RuntimeError(f"Missing env var for iTickets feed URL: {ev['feed_url_env']}")
+
+        rows = fetch_itickets_csv_via_curl(url)
+        sums = summarize_itickets_total(rows)
+        total_included = int(sums["total_sold"])
+
+        key = f"itickets:{eid}"
+        changed = save_snapshot(key, today_str, total_included)
+        print(f"[snapshot][itickets] {name} {today_str} = {total_included} ({'saved' if changed else 'unchanged'})")
 
     return 0
 

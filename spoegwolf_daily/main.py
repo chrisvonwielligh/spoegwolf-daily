@@ -5,12 +5,14 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 import pytz
 
-from .config import CFG, SHOWS, QUICKET_EVENTS
+from .config import CFG, SHOWS, QUICKET_EVENTS, ITICKETS_EVENTS
 from .data_sources.plankton import get_event_summary
 from .data_sources.quicket import (
     summarize_event as quicket_summarize,
     get_event_date_first_page,
 )
+from .data_sources.itickets import fetch_itickets_csv_via_curl, summarize_itickets_total
+import os
 from .data_sources.shopify import get_shopify_last7_summary
 from .summarize_af import build_message
 from .senders.emailer import send_email_summary
@@ -130,6 +132,45 @@ def generate_summary_text() -> str:
                 "days_to_event": days_to,
             })
 
+    # -------- iTickets blocks --------
+    itickets_blocks = []
+    for ev in ITICKETS_EVENTS:
+        eid = str(ev["eid"])
+        name = ev["name"]
+        capacity = int(ev.get("capacity", 0))
+
+        url = os.getenv(ev["feed_url_env"], "")
+        if not url:
+            raise RuntimeError(f"Missing env var for iTickets feed URL: {ev['feed_url_env']}")
+
+        rows = fetch_itickets_csv_via_curl(url)
+        sums = summarize_itickets_total(rows)
+
+        normal = int(sums["normal"])
+        vip = int(sums["vip"])
+        total = int(sums["total_sold"])
+
+        yday = yesterday_delta(f"itickets:{eid}", tz)
+
+        # days to event (manual override date-only)
+        dte = None
+        if ev.get("event_date_date"):
+            try:
+                d = datetime.strptime(ev["event_date_date"], "%Y-%m-%d").date()
+                dte = _days_to(d, tz)
+            except Exception:
+                dte = None
+
+        itickets_blocks.append({
+            "name": name,
+            "capacity": capacity,
+            "normal": normal,
+            "vip": vip,
+            "total": total,
+            "yesterday": yday,
+            "days_to_event": dte,
+        })
+
     # -------- Shopify --------
     shop = None
     if CFG.get("SHOPIFY_BASE") and CFG.get("SHOPIFY_ACCESS_TOKEN"):
@@ -140,7 +181,7 @@ def generate_summary_text() -> str:
             print(f"[WARN] Shopify fetch failed: {e}")
 
     # -------- Build final message --------
-    msg = build_message(blocks, tz=tz, shopify=shop, quicket=quicket_blocks or None)
+    msg = build_message(blocks, tz=tz, shopify=shop, quicket=quicket_blocks or None, itickets=itickets_blocks or None)
     return msg
 
 
