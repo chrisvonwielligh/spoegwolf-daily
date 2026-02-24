@@ -37,17 +37,17 @@ QUICKET_EVENTS = [
 
  
 
-        {
-      "id": 349783,
-      "name": "Snowflake Potch",
-      "capacity": 2000,
-      "event_date": "2026-02-21",  # optional override
-      "groups": {
-          "Adults": ["Early Bird", "Fase Een", "Fase Twee"],
-          "Kids":   ["Kids Under 13"],
-          "exclude":["Honorary","Complimentary","Merchandise"]  # optional
-      }
-    },
+    #     {
+    #   "id": 349783,
+    #   "name": "Snowflake Potch",
+    #   "capacity": 2000,
+    #   "event_date": "2026-02-21",  # optional override
+    #   "groups": {
+    #       "Adults": ["Early Bird", "Fase Een", "Fase Twee"],
+    #       "Kids":   ["Kids Under 13"],
+    #       "exclude":["Honorary","Complimentary","Merchandise"]  # optional
+    #   }
+    # },
 ]
 
 # Shows we care about (string GUIDs). Capacity is your own target number.
