@@ -53,56 +53,56 @@ QUICKET_EVENTS = [
 # Shows we care about (string GUIDs). Capacity is your own target number.
 SHOWS = [
 
-    # {
-    #     "name": "Droomland Kaap",
-    #     "event_guid": "df6e673e-445c-4b75-87e8-790eedc82f0e",  # replace if needed
-    #     "capacity": 3500,
-    #     # Group mapping for this event: exact names (case/space tolerant)
-    #     "groups": {
-    #         "GA (Adults)": [
-    #             "Early Bird",
-    #             "Phase 1",
-    #             "Phase 2",
-    #             "Phase 3",
-    #             "Phase 4",
-    #         ],
-    #         "Kids Tickets": [
-    #             "Kids Under 12",
-    #             "Kids Under 18",
-    #         ],
-    #         "Goue Kraal": [
-    #             "Goue Kraal (VIP)",
-    #         ],
-    #         "exclude": [
+    {
+        "name": "Droomland Kaap",
+        "event_guid": "bb525e91-e9f2-4f5a-9fde-82af179c5f77",  # replace if needed
+        "capacity": 3500,
+        # Group mapping for this event: exact names (case/space tolerant)
+        "groups": {
+            "GA (Adults)": [
+                "Early Bird",
+                "Fase 1",
+                "Fase 2",
+                "Fase 3",
+                "Fase 4",
+            ],
+            "Kids Tickets": [
+                "Kids Under 12",
+                "Kids Under 6",
+            ],
+            "Goue Kraal": [
+                "Goue Kraal",
+            ],
+            "exclude": [
 
-    #         ],
-    #     },
-    # },
-    #  {
-    #     "name": "Loftus Park Pretoria",
-    #     "event_guid": "5aa195ca-dd0f-4e35-b4e6-acb06cbefd83",  # replace if needed
-    #     "capacity": 2000,
-    #     # Group mapping for this event: exact names (case/space tolerant)
-    #     "groups": {
-    #         "GA (Adults)": [
-    #             "Early Bird",
-    #             "Phase 1",
-    #             "Phase 2",
-    #             "Phase 3",
-    #             "Phase 4",
-    #         ],
-    #         "Kids Tickets": [
-    #             "Kids Under 12",
-    #             "Kids Under 18",
-    #         ],
-    #         "Goue Kraal": [
-    #             "Goue Kraal (VIP)",
-    #         ],
-    #         "exclude": [
+            ],
+        },
+    },
+     {
+        "name": "Droomland Pretoria",
+        "event_guid": "a171ec24-80e7-4aa5-be79-c2d395050a11",  # replace if needed
+        "capacity": 10000,
+        # Group mapping for this event: exact names (case/space tolerant)
+        "groups": {
+            "GA (Adults)": [
+                "Early Bird",
+                "Fase 1",
+                "Fase 2",
+                "Fase 3",
+                "Fase 4",
+            ],
+            "Kids Tickets": [
+                "Kids Under 12",
+                "Kids Under 6",
+            ],
+            "Goue Kraal": [
+                "Goue Kraal",
+            ],
+            "exclude": [
 
-    #         ],
-    #     },
-    # },
+            ],
+        },
+    },
     # Add more shows with their own groups here if needed
 ]
 
