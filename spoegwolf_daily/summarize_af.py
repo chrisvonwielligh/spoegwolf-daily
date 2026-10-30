@@ -85,8 +85,20 @@ def build_message(shows_blocks, tz="Africa/Johannesburg", shopify=None, quicket=
             lines.append(f"Gister se verkope: {'NVT' if yday is None else yday}")
             if days_to is not None:
                 lines.append(f"dae tot die show: {days_to}")
-            lines.append(f"Normal: {normal}")
-            lines.append(f"VIP: {vip}")
+            groups = b.get("groups") or {}
+            if groups:
+                gcap = int(b.get("group_capacity", 0))
+                for label, n in groups.items():
+                    if gcap > 0:
+                        lines.append(f"{label}: {n} ({round(100 * n / gcap)}% van {gcap:,})")
+                    else:
+                        lines.append(f"{label}: {n}")
+                if b.get("other"):
+                    lines.append(f"Ander: {b['other']}")
+            else:
+                lines.append(f"Normal: {normal}")
+                if b.get("show_vip", True):
+                    lines.append(f"VIP: {vip}")
             lines.append(f"Total Sold: {total}")
 
             if cap > 0:

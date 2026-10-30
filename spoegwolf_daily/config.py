@@ -107,11 +107,36 @@ SHOWS = [
 ]
 
 ITICKETS_EVENTS = [
-    # {
-    #     "eid": "486660",
-    #     "name": "Spoegwolf op Ys 2027 (iTickets)",
-    #     "capacity": 8000,  # set later if you know cap
-    #     "event_date_date": "2027-08-10",
-    #     "feed_url_env": "ITICKETS_FEED_OYS",  # GitHub secret name (full URL)
-    # }
+    # feed_url_env = name of the env var / GitHub secret holding the full feed URL.
+    # capacity 0 = no "Sold Out %" line. event_date_date optional ("YYYY-MM-DD") -> "dae tot die show".
+    {
+        "eid": "486660",
+        "name": "Spoegwolf op Ys 2027",
+        "capacity": 9000,  # TODO confirm
+        "event_date_date": "2027-08-10",  # TODO confirm
+        "feed_url_env": "ITICKETS_FEED_OYS2027",
+    },
+
+    {
+        "eid": "487717",
+        "name": "Stables Stilbaai",
+        "capacity": 800,  # both nights (2 x 400)
+        "event_date_date": "2026-12-17",
+        "feed_url_env": "ITICKETS_FEED_STILBAAI",
+        # Split by ticket type (matched against the CSV "type" column, case-insensitive).
+        # Unmatched tickets show as "Ander".
+        "groups": {
+            "17 DEC": ["17"],
+            "18 DEC": ["18"],
+        },
+        "group_capacity": 400,  # per night -> "17 DEC: n (x% van 400)"
+    },
+    {
+        "eid": "487716",
+        "name": "Stanford Hills",
+        "capacity": 1500,  # TODO
+        "event_date_date": "2026-12-16",
+        "feed_url_env": "ITICKETS_FEED_STANFORD",
+        "show_vip": False,  # only normal tickets
+    },
 ]

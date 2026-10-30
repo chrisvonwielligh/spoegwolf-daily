@@ -30,7 +30,9 @@ jobs:
           SHOPIFY_BASE: ${{ secrets.SHOPIFY_BASE }}
           SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
           #itickets
-          ITICKETS_FEED_OYS: ${{ secrets.ITICKETS_FEED_OYS }}
+          ITICKETS_FEED_OYS2027: ${{ secrets.ITICKETS_FEED_OYS2027 }}
+          ITICKETS_FEED_STILBAAI: ${{ secrets.ITICKETS_FEED_STILBAAI }}
+          ITICKETS_FEED_STANFORD: ${{ secrets.ITICKETS_FEED_STANFORD }}
           # Email
           EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
           EMAIL_PORT: ${{ secrets.EMAIL_PORT }}

@@ -34,7 +34,9 @@ jobs:
             QUICKET_API_KEY: ${{ secrets.QUICKET_API_KEY }}
             QUICKET_USERTOKEN: ${{ secrets.QUICKET_USERTOKEN }}
             #itickets
-            ITICKETS_FEED_OYS: ${{ secrets.ITICKETS_FEED_OYS }}
+            ITICKETS_FEED_OYS2027: ${{ secrets.ITICKETS_FEED_OYS2027 }}
+            ITICKETS_FEED_STILBAAI: ${{ secrets.ITICKETS_FEED_STILBAAI }}
+            ITICKETS_FEED_STANFORD: ${{ secrets.ITICKETS_FEED_STANFORD }}
         run: |
           . .venv/bin/activate
           python -m spoegwolf_daily.cron_snapshot

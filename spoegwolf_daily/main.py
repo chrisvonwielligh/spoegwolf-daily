@@ -144,7 +144,7 @@ def generate_summary_text() -> str:
             raise RuntimeError(f"Missing env var for iTickets feed URL: {ev['feed_url_env']}")
 
         rows = fetch_itickets_csv_via_curl(url)
-        sums = summarize_itickets_total(rows)
+        sums = summarize_itickets_total(rows, ev.get("groups"))
 
         normal = int(sums["normal"])
         vip = int(sums["vip"])
@@ -169,6 +169,10 @@ def generate_summary_text() -> str:
             "total": total,
             "yesterday": yday,
             "days_to_event": dte,
+            "groups": sums["groups"],
+            "other": sums["other"],
+            "group_capacity": int(ev.get("group_capacity", 0)),
+            "show_vip": ev.get("show_vip", True),
         })
 
     # -------- Shopify --------
